@@ -9,11 +9,21 @@
 ![seaborn-logo](https://img.shields.io/badge/Seaborn-4C72B0?style=for-the-badge&logo=seaborn&logoColor=white)
 ![jupyter-logo](https://img.shields.io/badge/Jupyter-F37626?style=for-the-badge&logo=jupyter&logoColor=white)
 
-## 🚀 Unidade I
+## 🚀 Unidade I - Fundamentos de Python para Ciência de Dados
+
+Na Unidade 1, revisamos os conceitos fundamentais de **Python**, essenciais para quem deseja trabalhar com ciência de dados. Aprendemos sobre variáveis, estruturas de controle, funções, manipulação de listas e dicionários, além de boas práticas de codificação. Também exploramos três das **bibliotecas** mais importantes da área:
+
+- **NumPy**: para trabalhar com arrays e realizar operações matemáticas e estatísticas de forma eficiente.
+
+- **Matplotlib**: para criação de gráficos e visualizações dos dados.
+
+- **Pandas**: para manipulação e análise de dados tabulares, com foco em DataFrames.
+
+Esses conhecimentos são a base para desenvolver projetos analíticos mais robustos e interpretar dados de forma clara e objetiva.
 
 ### 🎯 Atividades/projetos
 
-- [📌 Atividade 1](./uni1/atividade1.md)
+- [📌 Trabalho 1 - Parte I - Projeto de Análise de Dados](./uni1/trabalho1/parte1.md)
 
 ## 🚀 Unidade II
 
