@@ -1,0 +1,58 @@
+# Ambiente virtual
+venv/
+env/
+ENV/
+.venv/
+.ENV/
+
+# Bytecode Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Configs de IDEs e editores
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# Arquivos de log
+*.log
+
+# Arquivos temporários
+*.tmp
+*.bak
+*.swp
+.DS_Store
+Thumbs.db
+
+# Arquivos de testes
+.coverage
+.tox/
+.nox/
+.pytest_cache/
+
+# Cache do pip
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Arquivos do mypy e pyright
+.mypy_cache/
+.pyright/
+
+# Compilação Cython
+*.c
+*.cpp
+*.so
+
+# Arquivos do Django
+*.sqlite3
+db.sqlite3
+staticfiles/
+media/
+
+# Docker
+*.pid
+
+# Jupyter
+.ipynb_checkpoints/
