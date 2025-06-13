@@ -27,9 +27,11 @@ Esses conhecimentos são a base para desenvolver projetos analíticos mais robus
 
 ## 🚀 Unidade II
 
+Nesta unidade, exploramos conceitos fundamentais de Análise Exploratória de Dados (EDA) aplicados ao contexto esportivo. Utilizando um conjunto de dados de jogadores de futebol, buscamos compreender padrões, tendências e possíveis insights relevantes sobre desempenho, características físicas e outras variáveis associadas aos atletas. As atividades a seguir colocam em prática essas análises, combinando visualizações, estatísticas descritivas e interpretação crítica dos dados.
+
 ### 🎯 Atividades/projetos
 
-- [📌 Atividade 2](./uni2/atividade1.md)
+- [📌 Atividade 2 - Realizando algumas Analises Exploradicas dos dados](./notebooks/trab1_tarefa2.ipynb)
 
 ## 🚀 Unidade III
 
