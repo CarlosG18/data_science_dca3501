@@ -6,6 +6,39 @@ import seaborn as sns
 from sklearn.preprocessing import StandardScaler
 import plotly.figure_factory as ff
 
+# Carregar dados
+df = pd.read_csv("./dataset/dataset_clean.csv")
+
+# Identificar a coluna correta
+coluna_valor = [col for col in df.columns if "valor_mercado" in col][0]
+
+# Converter os valores para float
+df['valor_mercado'] = df[coluna_valor].str.replace('R$', '', regex=False)\
+                                    .str.replace('.', '', regex=False)\
+                                    .str.replace(',', '.', regex=False)\
+                                    .astype(float)
+
+# Slider para faixa total
+min_valor = int(df['valor_mercado'].min())
+max_valor = int(df['valor_mercado'].max())
+step = 5_000_000
+
+# SIDEBAR
+# Using object notation
+add_selectbox = st.sidebar.selectbox(
+    "Filtre pela posição do jogador",
+    ("G", "D", "M", "F")
+)
+
+#values = st.sidebar.slider("Selecione a faixa de preço dos jogadores", 0.0, 100.0, (25.0, 75.0))
+intervalo = st.sidebar.slider("Escolha o intervalo de valor", min_valor, max_valor, (min_valor, max_valor), step=step, format="R$ %d")
+
+st.markdown("""
+## Função para criar o time
+
+Esta seção utiliza um modelo de aprendizado de máquina para sugerir a formação ideal de um time com base nos atributos dos jogadores e no valor de mercado. A ideia é montar uma equipe equilibrada, maximizando o desempenho dentro de um orçamento definido.
+""")
+
 # parte introdutoria
 st.title('Dashboard - Statistics Players')
 st.markdown("""
@@ -15,28 +48,42 @@ Este dashboard foi desenvolvido com **Streamlit** como parte do Trabalho 1 da di
 """)
 
 # lendo o dataframe do valor de mercado
-df_prices = pd.read_csv(r"C:\Users\carlos.medeiros\carlos\uf\data_science_dca3501\uni2\dataset\market_value.csv")
-print(df_prices.shape)
+#df_prices = pd.read_csv(r"C:\Users\carlos.medeiros\carlos\uf\data_science_dca3501\uni2\dataset\market_value.csv")
+#print(df_prices.shape)
 
 # lendo o dataframe das estatisticas do jogador
-df = pd.read_csv(r"C:\Users\carlos.medeiros\carlos\uf\data_science_dca3501\uni2\dataset\statistics_player.csv")
-print(df.shape)
+#df = pd.read_csv(r"C:\Users\carlos.medeiros\carlos\uf\data_science_dca3501\uni2\dataset\statistics_player.csv")
+#print(df.shape)
 
 # Primeira linha: gráfico 1 e gráfico 2
 col1, col2 = st.columns(2)
 
+# Filtrar o DataFrame com base na posição e no intervalo de valores
+df_filtrado = df[
+    (df['valor_mercado'] >= intervalo[0]) &
+    (df['valor_mercado'] <= intervalo[1]) &
+    (df['position'] == add_selectbox)  # <--- ajuste aqui conforme o nome exato da coluna
+]
+
 with col1:
     st.subheader("Gráfico 1")
     st.caption("Mostrar os jogadores na faixa de preço (barra)")
-    chart_data = pd.DataFrame(
-        {
-            "col1": list(range(20)) * 3,
-            "col2": np.random.randn(60),
-            "col3": ["A"] * 20 + ["B"] * 20 + ["C"] * 20,
-        }
-    )
+    
+    # Gerar bins
+    bins = list(range(intervalo[0], intervalo[1] + step, step))
+    # Gerar bins
+    bins = list(range(intervalo[0], intervalo[1] + step, step))
+    df_filtrado['faixa_preco'] = pd.cut(df_filtrado['valor_mercado'], bins=bins)
 
-    st.bar_chart(chart_data, x="col1", y="col2", color="col3")
+    # Contar jogadores por faixa
+    faixa_counts = df_filtrado['faixa_preco'].value_counts().sort_index()
+
+    # Criar rótulos legíveis
+    labels = [f"{int(b.left / 1e6)}M–{int(b.right / 1e6)}M" for b in faixa_counts.index]
+    faixa_counts.index = labels
+
+    # Exibir gráfico
+    st.bar_chart(faixa_counts)
 
 with col2:
     st.subheader("Gráfico 2")
@@ -76,17 +123,3 @@ with col4:
     st.area_chart(chart_data)
 
 
-# SIDEBAR
-# Using object notation
-add_selectbox = st.sidebar.selectbox(
-    "Filtre pela posição do jogador",
-    ("Goleiro", "Zagueiro", "Meia", "Atacante")
-)
-
-values = st.sidebar.slider("Selecione a faixa de preço dos jogadores", 0.0, 100.0, (25.0, 75.0))
-
-st.markdown("""
-## Função para criar o time
-
-Esta seção utiliza um modelo de aprendizado de máquina para sugerir a formação ideal de um time com base nos atributos dos jogadores e no valor de mercado. A ideia é montar uma equipe equilibrada, maximizando o desempenho dentro de um orçamento definido.
-""")
