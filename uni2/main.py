@@ -7,7 +7,7 @@ from sklearn.preprocessing import StandardScaler
 import plotly.figure_factory as ff
 
 # Carregar dados
-df = pd.read_csv("./dataset/dataset_clean.csv")
+df = pd.read_csv("./dataset/melhores_jogadores.csv")
 
 # Identificar a coluna correta
 coluna_valor = [col for col in df.columns if "valor_mercado" in col][0]
@@ -121,7 +121,7 @@ for col in selected_labels:
         df_normalized[col] = (df[col] - col_min) / (col_max - col_min + 1e-8)
 
 # Filtrar os 5 melhores jogadores da posição
-top_players = df_normalized[df['position'] == selected_position].sort_values(by='rating', ascending=False).head(5)
+top_players = df_normalized[df['position'] == selected_position].sort_values(by='score_normalizado', ascending=False).head(5)
 
 # Ângulos para o gráfico
 angles = np.linspace(0, 2 * np.pi, len(selected_labels), endpoint=False).tolist()
