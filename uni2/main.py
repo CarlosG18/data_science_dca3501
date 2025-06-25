@@ -5,6 +5,8 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 from sklearn.preprocessing import StandardScaler
 import plotly.figure_factory as ff
+import plotly.express as px
+import plotly.graph_objects as go
 
 # Carregar dados
 df = pd.read_csv("./dataset/melhores_jogadores.csv")
@@ -100,7 +102,7 @@ st.bar_chart(faixa_counts)
 st.subheader("Gráfico 2")
 st.caption("Atributos físicos")
 
-# Labels específicas por posição
+# Dicionário de métricas por posição
 position_metrics = {
     'G': ["rating", "saves", "savedShotsFromInsideTheBox", "goodHighClaim", "height", "goalsPrevented"],
     'D': ["duelWon", "totalClearance", "blockedScoringAttempt", "interceptionWon", "height", "accuratePass"],
@@ -108,11 +110,21 @@ position_metrics = {
     'F': ["goals", "expectedGoals", "onTargetScoringAttempt", "bigChanceCreated", "expectedAssists", "goalAssist"]
 }
 
+# Exemplo de labels de posição (mapeamento tipo 'G' → 'Goleiro')
+position_labels = {
+    'G': 'Goleiro',
+    'D': 'Defensor',
+    'M': 'Meio-campo',
+    'F': 'Atacante'
+}
 
-# Colunas a serem usadas no gráfico
+# Suponha que selected_position seja definido anteriormente, ex: selected_position = 'D'
+# Carregue seu DataFrame df aqui (já limpo)
+# df = pd.read_csv("...")
+
 selected_labels = position_metrics[selected_position]
 
-# Normalizar globalmente os atributos selecionados
+# Normalização
 df_normalized = df.copy()
 for col in selected_labels:
     if col in df.columns:
@@ -120,64 +132,64 @@ for col in selected_labels:
         col_max = df[col].max()
         df_normalized[col] = (df[col] - col_min) / (col_max - col_min + 1e-8)
 
-# Filtrar os 5 melhores jogadores da posição
-top_players = df_normalized[df['position'] == selected_position].sort_values(by='score_normalizado', ascending=False).head(5)
+# Top 5 jogadores da posição
+top_players = df_normalized[df['position'] == selected_position].sort_values(
+    by='score_normalizado', ascending=False
+).head(5)
 
-# Ângulos para o gráfico
-angles = np.linspace(0, 2 * np.pi, len(selected_labels), endpoint=False).tolist()
-angles += angles[:1]
+# Radar com Plotly
+fig = go.Figure()
 
-# Título e descrição
-st.subheader(f"Radar - Top 5 {position_labels[selected_position]}s")
+for _, row in top_players.iterrows():
+    values = row[selected_labels].tolist()
+    values += values[:1]  # Fecha o círculo
+
+    labels = selected_labels + [selected_labels[0]]
+    nome = row['name'] if 'name' in row else "Jogador"
+
+    fig.add_trace(go.Scatterpolar(
+        r=values,
+        theta=labels,
+        fill='toself',
+        name=nome,
+        line=dict(width=2)
+    ))
+
+# Layout do gráfico
+fig.update_layout(
+    title=f"Radar - Top 5 {position_labels[selected_position]}s",
+    width=800,     # largura do gráfico em pixels
+    height=700,    # altura do gráfico em pixels
+    polar=dict(
+        radialaxis=dict(visible=True, range=[0, 1])
+    ),
+    showlegend=True,
+    legend=dict(x=1.05, y=1)
+)
+
+
+# Mostrar no Streamlit
+st.plotly_chart(fig, use_container_width=True)
+
+# Descrição
 st.caption("Atributos normalizados com base em todo o conjunto de dados")
 
-# Criação do gráfico
-fig, ax = plt.subplots(figsize=(7, 7), subplot_kw=dict(polar=True))
-colors = plt.cm.viridis(np.linspace(0, 1, len(top_players)))
-
-for idx, (i, player) in enumerate(top_players.iterrows()):
-    values = player[selected_labels].values.tolist()
-    values += values[:1]
-    nome = player['name'] if 'name' in player else f"Jogador {idx+1}"
-    ax.plot(angles, values, label=nome, color=colors[idx], linewidth=2)
-    ax.fill(angles, values, color=colors[idx], alpha=0.1)
-
-# Configurações visuais
-ax.set_xticks(angles[:-1])
-ax.set_xticklabels(selected_labels, fontsize=9)
-ax.set_title(f"Top 5 jogadores - {position_labels[selected_position]}")
-ax.grid(True)
-ax.legend(loc='upper right', bbox_to_anchor=(1.3, 1.1))
-
-# Mostrar gráfico
-st.pyplot(fig)
 
 
 
 
 
 
+# GRAFICO 3
+# Gráfico de correlação
+st.subheader("Gráfico 3")
+st.caption("Correlação das variáveis com o preço")
 
-#with col1:
-#with col2:
-    
-# Segunda linha: gráfico 3 e modelo de ML
-col3, col4 = st.columns(2)
 
-with col3:
-    st.subheader("Gráfico 3")
-    st.caption("Correlação das variáveis com o preço")
-    chart_data = pd.DataFrame(np.random.randn(20, 3), columns=["a", "b", "c"])
 
-    st.scatter_chart(chart_data)    
 
-with col4:
-    st.subheader("Modelo de ML")
-    st.caption("Predição de preços com base nos atributos")
-    chart_data = pd.DataFrame(np.random.randn(20, 3), columns=["a", "b", "c"])
-
-    st.area_chart(chart_data)
-
+st.subheader("Modelo de ML")
+st.caption("Predição de preços com base nos atributos")
 
 def montar_time_ideal(df, budget, position_labels):
     st.subheader("🔧 Montagem Interativa do Time Ideal")
