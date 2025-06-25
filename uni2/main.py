@@ -179,3 +179,323 @@ with col4:
     st.area_chart(chart_data)
 
 
+def montar_time_ideal(df, budget, position_labels):
+    st.subheader("🔧 Montagem Interativa do Time Ideal")
+    st.caption("Selecione o orçamento máximo e veja a seleção sugerida com os 11 melhores jogadores dentro do limite.")
+
+    # Entrada do usuário
+    orcamento = st.slider("💰 Selecione o orçamento máximo para montar seu time:", 10_000_000, 200_000_000, budget, step=5_000_000, format="R$ %d")
+    
+    # Garantir que a coluna de pontuação está presente
+    if 'score_normalizado' not in df.columns:
+        df['score_normalizado'] = np.random.rand(len(df))  # substituir por uma métrica real se houver
+
+    # Definir posições e quantidades
+    esquema_tatico = {'G': 1, 'D': 4, 'M': 3, 'F': 3}
+    global jogadores_selecionados
+    jogadores_selecionados = []
+    total_valor = 0
+
+    for posicao, qtd in esquema_tatico.items():
+        candidatos = df[df['position'] == posicao].sort_values(by='score_normalizado', ascending=False)
+        selecionados = []
+
+        for _, jogador in candidatos.iterrows():
+            if len(selecionados) < qtd and total_valor + jogador['valor_mercado'] <= orcamento:
+                selecionados.append(jogador)
+                total_valor += jogador['valor_mercado']
+
+        jogadores_selecionados.extend(selecionados)
+
+    # Mostrar resultado
+    if jogadores_selecionados:
+        df_time = pd.DataFrame(jogadores_selecionados)
+        st.success(f"✅ Time montado com sucesso! Total gasto: R$ {int(total_valor):,}".replace(",", "."))
+        
+        # Exibir como tabela
+        st.dataframe(df_time[['name', 'position', 'valor_mercado', 'score_normalizado']].rename(columns={
+            'name': 'Nome',
+            'position': 'Posição',
+            'valor_mercado': 'Valor de Mercado',
+            'score_normalizado': 'Pontuação'
+        }), use_container_width=True)
+    else:
+        st.warning("⚠️ Não foi possível montar um time com o orçamento definido.")
+
+def exibir_time_em_campo(df_time, position_labels):
+    st.markdown("## 🟢 Time em Campo (Formação 1-4-3-3)")
+    st.markdown("Visualização dos jogadores como se estivessem dispostos em um campo de futebol.")
+
+    # Agrupar jogadores por posição
+    posicoes = {'G': [], 'D': [], 'M': [], 'F': []}
+    for _, row in df_time.iterrows():
+        posicoes[row['position']].append(row)
+
+    def format_player(jogador):
+        return f"""<div style="background:#000; border-radius:12px; padding:10px; text-align:center; box-shadow:2px 2px 6px #00000033; margin:5px;">
+            <strong>{jogador['name']}</strong><br>
+            <span style="font-size:12px;">💰 R$ {int(jogador['valor_mercado']):,}</span><br>
+            <span style="font-size:12px;">⭐ {jogador['score_normalizado']:.2f}</span>
+        </div>"""
+    
+    # Goleiro
+    st.markdown("### 🧤 Goleiro", unsafe_allow_html=True)
+    col = st.columns(1)
+    if posicoes['G']:
+        col[0].markdown(format_player(posicoes['G'][0]), unsafe_allow_html=True)
+
+    # Defensores
+    st.markdown("### 🛡️ Defesa", unsafe_allow_html=True)
+    cols = st.columns(4)
+    for i, jogador in enumerate(posicoes['D']):
+        cols[i].markdown(format_player(jogador), unsafe_allow_html=True)
+
+    # Meio-campistas
+    st.markdown("### 🎯 Meio-Campo", unsafe_allow_html=True)
+    cols = st.columns(3)
+    for i, jogador in enumerate(posicoes['M']):
+        cols[i].markdown(format_player(jogador), unsafe_allow_html=True)
+
+    # Atacantes
+    st.markdown("### 🎯 Ataque", unsafe_allow_html=True)
+    cols = st.columns(3)
+    for i, jogador in enumerate(posicoes['F']):
+        cols[i].markdown(format_player(jogador), unsafe_allow_html=True)
+
+    st.markdown("</div>", unsafe_allow_html=True)
+
+montar_time_ideal(df, budget=100_000_000, position_labels=position_labels)
+exibir_time_em_campo(pd.DataFrame(jogadores_selecionados), position_labels)
+
+st.set_page_config(layout="wide")
+
+# HTML e CSS para o campo de futebol
+html_code = """
+<style>
+  .field-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh; /* Ajuste a altura conforme necessário */
+    overflow: hidden; /* Para garantir que o campo não transborde */
+  }
+
+  .soccer-field {
+    width: 90%;
+    max-width: 1000px; /* Largura máxima para o campo */
+    aspect-ratio: 100 / 60; /* Proporção aproximada de um campo de futebol */
+    background-color: #588f27; /* Cor verde do campo */
+    border: 5px solid white; /* Borda externa */
+    position: relative;
+    box-shadow: 0 0 20px rgba(0,0,0,0.5);
+    overflow: hidden; /* Garante que os elementos fora da borda não sejam visíveis, exceto os gols */
+  }
+
+  /* Círculo central */
+  .center-circle {
+    width: 20%;
+    height: 33.33%; /* Ajuste com base na proporção desejada do círculo */
+    border: 3px solid white;
+    border-radius: 50%;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+  }
+
+  /* Linha central */
+  .center-line {
+    width: 3px;
+    height: 100%;
+    background-color: white;
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+  }
+
+  /* Áreas de grande penalidade */
+  .penalty-box-left, .penalty-box-right {
+    width: 15%; /* Ajuste da largura */
+    height: 44%; /* Ajuste da altura */
+    border: 3px solid white;
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    box-sizing: border-box;
+  }
+
+  .penalty-box-left {
+    left: 0;
+    border-left: none;
+  }
+
+  .penalty-box-right {
+    right: 0;
+    border-right: none;
+  }
+
+  /* Áreas de baliza */
+  .goal-area-left, .goal-area-right {
+    width: 7%; /* Ajuste da largura */
+    height: 20%; /* Ajuste da altura */
+    border: 3px solid white;
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    box-sizing: border-box;
+  }
+
+  .goal-area-left {
+    left: 0;
+    border-left: none;
+  }
+
+  .goal-area-right {
+    right: 0;
+    border-right: none;
+  }
+
+  /* Balizas */
+  .goal-left, .goal-right {
+    width: 2%; /* Largura da baliza */
+    height: 10%; /* Altura da baliza */
+    background-color: lightgray;
+    border: 2px solid darkgray;
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 10;
+  }
+
+  .goal-left {
+    left: -2%; /* Posição fora do campo */
+  }
+
+  .goal-right {
+    right: -2%; /* Posição fora do campo */
+  }
+
+  /* Marcas de grande penalidade */
+  .penalty-spot-left, .penalty-spot-right {
+    width: 1%;
+    height: 1.66%; /* Relativo à altura do campo */
+    background-color: white;
+    border-radius: 50%;
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+  }
+
+  .penalty-spot-left {
+    left: 10%; /* Ajuste da posição */
+  }
+
+  .penalty-spot-right {
+    right: 10%; /* Ajuste da posição */
+  }
+
+  /* Arco penal (meia-lua) */
+  .penalty-arc-left, .penalty-arc-right {
+    width: 15%; /* Largura do contêiner do arco (mesma da área para facilitar o posicionamento) */
+    height: 25%; /* Altura do contêiner do arco */
+    border: 3px solid white;
+    border-radius: 50%; /* Faz um círculo completo */
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+  }
+
+  .penalty-arc-left {
+    left: calc(15% - 7.5%); /* Posiciona o centro do círculo do arco na linha da área */
+    border-top-color: transparent;
+    border-bottom-color: transparent;
+    border-left-color: transparent; /* Esconde a parte interna do círculo */
+  }
+
+  .penalty-arc-right {
+    right: calc(15% - 7.5%); /* Posiciona o centro do círculo do arco na linha da área */
+    border-top-color: transparent;
+    border-bottom-color: transparent;
+    border-right-color: transparent; /* Esconde a parte interna do círculo */
+  }
+
+  /* Estilo dos jogadores (MAIOR) */
+  .player {
+    position: absolute;
+    width: 6%; /* Tamanho do jogador - AUMENTADO */
+    height: 10%; /* Tamanho do jogador (proporcional à altura do campo) - AUMENTADO */
+    border-radius: 50%; /* Formato de botão */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 0.9em; /* Aumentado */
+    font-weight: bold;
+    color: white;
+    text-align: center;
+    flex-direction: column; /* Nome abaixo do botão */
+    line-height: 1.2;
+    z-index: 5; /* Garante que os jogadores fiquem acima do campo */
+    box-shadow: 2px 2px 5px rgba(0,0,0,0.3); /* Sombra para dar profundidade */
+  }
+
+  .player-name {
+    font-size: 0.7em; /* Tamanho da fonte do nome - Aumentado */
+    color: white;
+    margin-top: 0.3em; /* Espaçamento entre o botão e o nome */
+    white-space: nowrap; /* Evita que o nome quebre a linha */
+    text-shadow: 1px 1px 2px rgba(0,0,0,0.7); /* Sombra no texto para melhor legibilidade */
+  }
+
+  .team-a {
+    background-color: #007bff; /* Azul */
+    border: 2px solid #0056b3; /* Borda mais grossa */
+  }
+
+  /* Posições dos jogadores (agora só um time) - Formação 4-3-3 adaptada */
+  /* Time A (Azul) */
+  .player-a-gk { left: 5%; top: 50%; transform: translate(-50%, -50%); }
+  .player-a-cb1 { left: 20%; top: 30%; transform: translate(-50%, -50%); }
+  .player-a-cb2 { left: 20%; top: 70%; transform: translate(-50%, -50%); }
+  .player-a-lb { left: 15%; top: 15%; transform: translate(-50%, -50%); }
+  .player-a-rb { left: 15%; top: 85%; transform: translate(-50%, -50%); }
+  .player-a-cm1 { left: 40%; top: 25%; transform: translate(-50%, -50%); }
+  .player-a-cm2 { left: 40%; top: 50%; transform: translate(-50%, -50%); }
+  .player-a-cm3 { left: 40%; top: 75%; transform: translate(-50%, -50%); }
+  .player-a-lw { left: 60%; top: 15%; transform: translate(-50%, -50%); }
+  .player-a-rw { left: 60%; top: 85%; transform: translate(-50%, -50%); }
+  .player-a-st { left: 75%; top: 50%; transform: translate(-50%, -50%); }
+
+</style>
+
+<div class="field-container">
+  <div class="soccer-field">
+    <div class="center-circle"></div>
+    <div class="center-line"></div>
+    <div class="penalty-box-left"></div>
+    <div class="penalty-box-right"></div>
+    <div class="goal-area-left"></div>
+    <div class="goal-area-right"></div>
+    <div class="goal-left"></div>
+    <div class="goal-right"></div>
+    <div class="penalty-spot-left"></div>
+    <div class="penalty-spot-right"></div>
+    <div class="penalty-arc-left"></div>
+    <div class="penalty-arc-right"></div>
+
+    <div class="player team-a player-a-gk">GK<span class="player-name">Alisson</span></div>
+    <div class="player team-a player-a-cb1">ZAG<span class="player-name">Marquinhos</span></div>
+    <div class="player team-a player-a-cb2">ZAG<span class="player-name">Thiago Silva</span></div>
+    <div class="player team-a player-a-lb">LE<span class="player-name">Alex Telles</span></div>
+    <div class="player team-a player-a-rb">LD<span class="player-name">Danilo</span></div>
+    <div class="player team-a player-a-cm1">MC<span class="player-name">Casemiro</span></div>
+    <div class="player team-a player-a-cm2">MC<span class="player-name">Paquetá</span></div>
+    <div class="player team-a player-a-cm3">MC<span class="player-name">Bruno G.</span></div>
+    <div class="player team-a player-a-lw">PE<span class="player-name">Vini Jr.</span></div>
+    <div class="player team-a player-a-rw">PD<span class="player-name">Raphinha</span></div>
+    <div class="player team-a player-a-st">ATA<span class="player-name">Richarlison</span></div>
+
+  </div>
+</div>
+"""
+
+st.components.v1.html(html_code, height=600) # Ajuste a altura conforme necessário
