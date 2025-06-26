@@ -10,7 +10,7 @@ import plotly.graph_objects as go
 import os
 
 # Carregar dados
-df = pd.read_csv("melhores_jogadores.csv")
+df = pd.read_csv("uni2\dataset\melhores_jogadores.csv")
 
 #path = os.path.join("dataset", "melhores_jogadores.csv")
 #if not os.path.exists(path):
