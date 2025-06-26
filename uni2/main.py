@@ -11,6 +11,16 @@ import plotly.graph_objects as go
 # Carregar dados
 df = pd.read_csv("./dataset/melhores_jogadores.csv")
 
+# Separar colunas numéricas e não numéricas (excluindo name e team_name)
+numericas = df.select_dtypes(include='number').columns.tolist()
+nao_numericas = df.select_dtypes(exclude='number').columns.difference(['name', 'team_name']).tolist()
+
+# Agrupar por nome e time
+df_agrupado = df.groupby(['name', 'team_name'], as_index=False).agg(
+    {col: 'mean' for col in numericas} | {col: 'first' for col in nao_numericas}
+)
+
+df = df_agrupado
 # Identificar a coluna correta
 coluna_valor = [col for col in df.columns if "valor_mercado" in col][0]
 
@@ -38,11 +48,6 @@ selected_position = st.sidebar.selectbox(
 #values = st.sidebar.slider("Selecione a faixa de preço dos jogadores", 0.0, 100.0, (25.0, 75.0))
 intervalo = st.sidebar.slider("Escolha o intervalo de valor", min_valor, max_valor, (min_valor, max_valor), step=step, format="R$ %d")
 
-st.markdown("""
-## Função para criar o time
-
-Esta seção utiliza um modelo de aprendizado de máquina para sugerir a formação ideal de um time com base nos atributos dos jogadores e no valor de mercado. A ideia é montar uma equipe equilibrada, maximizando o desempenho dentro de um orçamento definido.
-""")
 
 # parte introdutoria
 st.title('Dashboard - Statistics Players')
@@ -120,7 +125,6 @@ for col in selected_labels:
 top_players = df_normalized[df['position'] == selected_position].sort_values(
     by='score_normalizado', ascending=False
 ).head(5)
-
 # Radar com Plotly
 fig = go.Figure()
 
@@ -141,8 +145,8 @@ for _, row in top_players.iterrows():
 
 # Layout do gráfico
 fig.update_layout(
-    width=800,     # largura do gráfico em pixels
-    height=700,    # altura do gráfico em pixels
+    width=600,     # largura do gráfico em pixels
+    height=500,    # altura do gráfico em pixels
     polar=dict(
         radialaxis=dict(visible=True, range=[0, 1])
     ),
@@ -156,7 +160,67 @@ st.plotly_chart(fig, use_container_width=True)
 # GRAFICO 3
 # Gráfico de correlação
 st.subheader("Gráfico 3")
-st.caption("Correlação das variáveis com o preço")
+
+def correlacao(df):
+    st.markdown("## Heamap de correlação Interativo")
+
+    tipo = st.selectbox("Escolha o tipo de jogador:", ["Todos", "Goleiros", "Jogadores de linha"])
+
+    # 1. Filtrar por tipo de jogador
+    if tipo == "Goleiros":
+        variaveis = [
+        'rating',
+        'saves',
+        'savedShotsFromInsideTheBox',
+        'goodHighClaim',
+        'accuratePass',
+        'height',
+        'goalsPrevented',
+        'age',
+        'penaltyConceded',
+        'valor_mercado'
+        ]
+        df_filtrado = df[df['position'] == 'G']
+        # Junta todas as colunas
+        df_filtrado = df_filtrado[variaveis]
+        
+    elif tipo == "Jogadores de linha":
+        df_filtrado = df[df['position'] != 'G']
+    else:
+        df_filtrado = df.copy()
+
+    if df_filtrado.shape[0] < 2:
+        st.warning("⚠️ Dados insuficientes para calcular a correlação.")
+        return
+
+    # 2. Copiar e calcular correlações
+    df_temp = df_filtrado.copy()
+    correlacoes = df_temp.corr(numeric_only=True)
+
+    if 'valor_mercado' not in correlacoes.columns:
+        st.warning("⚠️ 'valor_mercado' não está entre as colunas numéricas.")
+        return
+
+    # 3. Selecionar as 10 variáveis com maior correlação absoluta com 'valor_mercado'
+    top10_vars = correlacoes['valor_mercado'].drop('valor_mercado').abs().sort_values(ascending=False).head(10).index.tolist()
+    colunas_plot = top10_vars + ['valor_mercado']
+
+    # 4. Criar nova matriz com essas colunas
+    matriz_reduzida = df_temp[colunas_plot].corr()
+
+    # 5. Exibir com Plotly
+    fig = px.imshow(
+        matriz_reduzida,
+        text_auto=".2f",
+        color_continuous_scale="RdBu_r",
+        aspect="auto",
+        title=f"Top 10 correlações com valor_mercado - {tipo}"
+    )
+
+    st.plotly_chart(fig, use_container_width=True)
+
+correlacao(df.drop(columns=['score_total','score_normalizado']))
+
 
 # GRAFICO 4
 from pulp import LpProblem, LpVariable, LpMaximize, lpSum, LpBinary, LpStatus
@@ -180,12 +244,17 @@ def get_esquema_tatico(esquema):
     else:
         raise ValueError("Esquema tático desconhecido.")
 
+
+def formatar_com_pontos(valor):
+    return f"{valor:,}".replace(",", ".")
+
+
 def montar_time_ideal(df, budget, position_labels):
   st.subheader("🔧 Montagem Otimizada do Time Ideal")
   st.caption("Seleciona automaticamente os 11 melhores jogadores respeitando posições e orçamento.")
 
   orcamento = st.slider("💰 Selecione o orçamento máximo para montar seu time:", 
-                        10_000_000, 200_000_000, budget, step=5_000_000, format="R$ %d")
+                        10_000_000, 700_000_000, budget, step=5_000_000, format="R$ %d")
 
   if 'score_normalizado' not in df.columns:
       df['score_normalizado'] = np.random.rand(len(df))  # substituir com métrica real
@@ -196,7 +265,7 @@ def montar_time_ideal(df, budget, position_labels):
   global widget_esquema_tatico
   widget_esquema_tatico = st.selectbox(
       "Selecione o esquema tático:",
-      options=["4-3-3", "3-5-2", "4-5-1", "4-4-2", "3-4-3", "4-6-0", "5-3-2"],
+      options=["4-3-3", "3-5-2", "4-5-1", "4-4-2", "3-4-3", "5-3-2"],
       index=0,
       key="esquema_tatico"
   )
@@ -228,20 +297,29 @@ def montar_time_ideal(df, budget, position_labels):
   modelo.solve()
 
   if LpStatus[modelo.status] == 'Optimal':
-      selecionados = [i for i in df.index if jogadores_vars[i].varValue == 1]
-      df_time = df.loc[selecionados]
-      total_valor = df_time['valor_mercado'].sum()
-      st.success(f"✅ Time montado com sucesso! Total gasto: R$ {int(total_valor):,}".replace(",", "."))
-      st.dataframe(df_time[['name', 'position', 'valor_mercado', 'score_normalizado']].rename(columns={
-          'name': 'Nome',
-          'position': 'Posição',
-          'valor_mercado': 'Valor de Mercado',
-          'score_normalizado': 'Pontuação'
-      }), use_container_width=True)
+    selecionados = [i for i in df.index if jogadores_vars[i].varValue == 1]
+    df_time = df.loc[selecionados]
+    total_valor = df_time['valor_mercado'].sum()
+    st.success(f"✅ Time montado com sucesso! Total gasto: R$ {int(total_valor):,}".replace(",", "."))
 
-      return df_time
+    # Criar uma cópia para formatar só para exibição
+    df_exibir = df_time.copy()
+
+    # Formatar a coluna valor_mercado para string com pontos como separador de milhar
+    df_exibir['valor_mercado'] = df_exibir['valor_mercado'].apply(lambda x: f"{int(x):,}".replace(",", "."))
+
+    # Mostrar no Streamlit com as colunas renomeadas
+    st.dataframe(df_exibir[['name', 'position', 'valor_mercado', 'score_normalizado']].rename(columns={
+        'name': 'Nome',
+        'position': 'Posição',
+        'valor_mercado': 'Valor de Mercado (R$)',
+        'score_normalizado': 'Pontuação'
+    }), use_container_width=True)
+
+    return df_time
   else:
-      st.warning("⚠️ Não foi possível montar um time com as restrições definidas (orçamento muito baixo).")
+    st.warning("⚠️ Não foi possível montar um time com as restrições definidas (orçamento muito baixo).")
+
 
 def exibir_time_em_campo(df_time, position_labels):
     st.markdown(f"## 🟢 Time em Campo (Formação {widget_esquema_tatico})")
@@ -253,11 +331,12 @@ def exibir_time_em_campo(df_time, position_labels):
         posicoes[row['position']].append(row)
 
     def format_player(jogador):
-        return f"""<div style="background:#000; border-radius:12px; padding:10px; text-align:center; box-shadow:2px 2px 6px #00000033; margin:5px;">
+        valor_formatado = f"{int(jogador['valor_mercado']):,}".replace(",", ".")
+        return f"""<div style="background:#cce7ff; border-radius:12px; padding:10px; text-align:center; box-shadow:2px 2px 6px #00000033; margin:5px;">
             <strong>{jogador['name']}</strong><br>
-            <span style="font-size:12px;">💰 R$ {int(jogador['valor_mercado']):,}</span><br>
+            <span style="font-size:12px;">💰 R$ {valor_formatado}</span><br>
             <span style="font-size:12px;">⭐ {jogador['score_normalizado']:.2f}</span>
-        </div>"""
+    </div>"""
     
     # Goleiro
     st.markdown("### 🧤 Goleiro", unsafe_allow_html=True)
