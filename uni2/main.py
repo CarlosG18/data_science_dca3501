@@ -10,13 +10,13 @@ import plotly.graph_objects as go
 import os
 
 # Carregar dados
-#df = pd.read_csv("./dataset/melhores_jogadores.csv")
+df = pd.read_csv("melhores_jogadores.csv")
 
-path = os.path.join("dataset", "melhores_jogadores.csv")
-if not os.path.exists(path):
-    raise FileNotFoundError(f"Arquivo não encontrado: {path}")
+#path = os.path.join("dataset", "melhores_jogadores.csv")
+#if not os.path.exists(path):
+    #raise FileNotFoundError(f"Arquivo não encontrado: {path}")
 
-df = pd.read_csv(path)
+#df = pd.read_csv(path)
 
 # Separar colunas numéricas e não numéricas (excluindo name e team_name)
 numericas = df.select_dtypes(include='number').columns.tolist()
