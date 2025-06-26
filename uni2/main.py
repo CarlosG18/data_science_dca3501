@@ -7,9 +7,13 @@ from sklearn.preprocessing import StandardScaler
 import plotly.figure_factory as ff
 import plotly.express as px
 import plotly.graph_objects as go
+import os
 
 # Carregar dados
-df = pd.read_csv("./dataset/melhores_jogadores.csv")
+#df = pd.read_csv("./dataset/melhores_jogadores.csv")
+
+path = os.path.join("dataset", "melhores_jogadores.csv")
+df = pd.read_csv(path)
 
 # Separar colunas numéricas e não numéricas (excluindo name e team_name)
 numericas = df.select_dtypes(include='number').columns.tolist()
