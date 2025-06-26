@@ -26,10 +26,7 @@ max_valor = int(df['valor_mercado'].max())
 step = 5_000_000
 
 # SIDEBAR
-# Using object notation
-# Sidebar para seleção de posição
 position_labels = {'G': 'Goleiro', 'D': 'Zagueiro', 'M': 'Meia', 'F': 'Atacante'}
-#selected_position = st.sidebar.selectbox("Selecione a posição:", list(position_labels.keys()), format_func=lambda x: position_labels[x])
 # Sidebar para escolha da posição
 selected_position = st.sidebar.selectbox(
     "Selecione a posição:",
@@ -55,16 +52,8 @@ st.markdown("""
 Este dashboard foi desenvolvido com **Streamlit** como parte do Trabalho 1 da disciplina **Ciência de Dados (DCA3501)**. Ele apresenta, de forma interativa e visual, os principais resultados da análise exploratória realizada no notebook original, facilitando a interpretação dos dados e das métricas estatísticas geradas durante o estudo.
 """)
 
-# lendo o dataframe do valor de mercado
-#df_prices = pd.read_csv(r"C:\Users\carlos.medeiros\carlos\uf\data_science_dca3501\uni2\dataset\market_value.csv")
-#print(df_prices.shape)
-
-# lendo o dataframe das estatisticas do jogador
-#df = pd.read_csv(r"C:\Users\carlos.medeiros\carlos\uf\data_science_dca3501\uni2\dataset\statistics_player.csv")
-#print(df.shape)
-
 # Primeira linha: gráfico 1 e gráfico 2
-#col1, col2 = st.columns(2)
+# col1, col2 = st.columns(2)
 
 # Filtrar o DataFrame com base na posição e no intervalo de valores
 df_filtrado = df[
@@ -94,13 +83,8 @@ faixa_counts.index = labels
 st.bar_chart(faixa_counts)
 
 
-
-
-
-
 # GRAFICO 2
-st.subheader("Gráfico 2")
-st.caption("Atributos físicos")
+st.subheader(f"Radar - Top 5 {position_labels[selected_position]}s")
 
 # Dicionário de métricas por posição
 position_metrics = {
@@ -157,7 +141,6 @@ for _, row in top_players.iterrows():
 
 # Layout do gráfico
 fig.update_layout(
-    title=f"Radar - Top 5 {position_labels[selected_position]}s",
     width=800,     # largura do gráfico em pixels
     height=700,    # altura do gráfico em pixels
     polar=dict(
@@ -167,75 +150,101 @@ fig.update_layout(
     legend=dict(x=1.05, y=1)
 )
 
-
 # Mostrar no Streamlit
 st.plotly_chart(fig, use_container_width=True)
-
-# Descrição
-st.caption("Atributos normalizados com base em todo o conjunto de dados")
-
-
-
-
-
-
 
 # GRAFICO 3
 # Gráfico de correlação
 st.subheader("Gráfico 3")
 st.caption("Correlação das variáveis com o preço")
 
+# GRAFICO 4
+from pulp import LpProblem, LpVariable, LpMaximize, lpSum, LpBinary, LpStatus
 
-
-
-st.subheader("Modelo de ML")
-st.caption("Predição de preços com base nos atributos")
+def get_esquema_tatico(esquema):
+    """Define o esquema tático com base na formação escolhida."""
+    if esquema == "4-3-3":
+        return {'G': 1, 'D': 4, 'M': 3, 'F': 3}
+    elif esquema == "3-5-2":
+        return {'G': 1, 'D': 3, 'M': 5, 'F': 2}
+    elif esquema == "4-5-1":
+        return {'G': 1, 'D': 4, 'M': 5, 'F': 1}
+    elif esquema == "4-4-2":
+        return {'G': 1, 'D': 4, 'M': 4, 'F': 2}
+    elif esquema == "3-4-3":
+        return {'G': 1, 'D': 3, 'M': 4, 'F': 3}
+    elif esquema == "4-6-0":
+        return {'G': 1, 'D': 4, 'M': 6, 'F': 0}
+    elif esquema == "5-3-2":
+        return {'G': 1, 'D': 5, 'M': 3, 'F': 2}
+    else:
+        raise ValueError("Esquema tático desconhecido.")
 
 def montar_time_ideal(df, budget, position_labels):
-    st.subheader("🔧 Montagem Interativa do Time Ideal")
-    st.caption("Selecione o orçamento máximo e veja a seleção sugerida com os 11 melhores jogadores dentro do limite.")
+  st.subheader("🔧 Montagem Otimizada do Time Ideal")
+  st.caption("Seleciona automaticamente os 11 melhores jogadores respeitando posições e orçamento.")
 
-    # Entrada do usuário
-    orcamento = st.slider("💰 Selecione o orçamento máximo para montar seu time:", 10_000_000, 200_000_000, budget, step=5_000_000, format="R$ %d")
-    
-    # Garantir que a coluna de pontuação está presente
-    if 'score_normalizado' not in df.columns:
-        df['score_normalizado'] = np.random.rand(len(df))  # substituir por uma métrica real se houver
+  orcamento = st.slider("💰 Selecione o orçamento máximo para montar seu time:", 
+                        10_000_000, 200_000_000, budget, step=5_000_000, format="R$ %d")
 
-    # Definir posições e quantidades
-    esquema_tatico = {'G': 1, 'D': 4, 'M': 3, 'F': 3}
-    global jogadores_selecionados
-    jogadores_selecionados = []
-    total_valor = 0
+  if 'score_normalizado' not in df.columns:
+      df['score_normalizado'] = np.random.rand(len(df))  # substituir com métrica real
 
-    for posicao, qtd in esquema_tatico.items():
-        candidatos = df[df['position'] == posicao].sort_values(by='score_normalizado', ascending=False)
-        selecionados = []
+  # Definir seletor de esquema tático
+  st.markdown("### ⚽ Escolha o esquema tático:")
+  st.caption("Selecione o esquema tático desejado para a formação do time.")
+  global widget_esquema_tatico
+  widget_esquema_tatico = st.selectbox(
+      "Selecione o esquema tático:",
+      options=["4-3-3", "3-5-2", "4-5-1", "4-4-2", "3-4-3", "4-6-0", "5-3-2"],
+      index=0,
+      key="esquema_tatico"
+  )
 
-        for _, jogador in candidatos.iterrows():
-            if len(selecionados) < qtd and total_valor + jogador['valor_mercado'] <= orcamento:
-                selecionados.append(jogador)
-                total_valor += jogador['valor_mercado']
+  # Definir esquema tático
 
-        jogadores_selecionados.extend(selecionados)
+  esquema_tatico = get_esquema_tatico(widget_esquema_tatico)
 
-    # Mostrar resultado
-    if jogadores_selecionados:
-        df_time = pd.DataFrame(jogadores_selecionados)
-        st.success(f"✅ Time montado com sucesso! Total gasto: R$ {int(total_valor):,}".replace(",", "."))
-        
-        # Exibir como tabela
-        st.dataframe(df_time[['name', 'position', 'valor_mercado', 'score_normalizado']].rename(columns={
-            'name': 'Nome',
-            'position': 'Posição',
-            'valor_mercado': 'Valor de Mercado',
-            'score_normalizado': 'Pontuação'
-        }), use_container_width=True)
-    else:
-        st.warning("⚠️ Não foi possível montar um time com o orçamento definido.")
+  # Criação do modelo de otimização
+  modelo = LpProblem("Selecao_Time_Ideal", LpMaximize)
+
+  # Variáveis de decisão
+  jogadores_vars = {
+      i: LpVariable(f"jogador_{i}", cat=LpBinary)
+      for i in df.index
+  }
+
+  # Função objetivo: maximizar score total
+  modelo += lpSum(jogadores_vars[i] * df.loc[i, 'score_normalizado'] for i in df.index)
+
+  # Restrição de orçamento
+  modelo += lpSum(jogadores_vars[i] * df.loc[i, 'valor_mercado'] for i in df.index) <= orcamento
+
+  # Restrição de número de jogadores por posição
+  for pos, qtd in esquema_tatico.items():
+      modelo += lpSum(jogadores_vars[i] for i in df[df['position'] == pos].index) == qtd
+
+  # Resolver o modelo
+  modelo.solve()
+
+  if LpStatus[modelo.status] == 'Optimal':
+      selecionados = [i for i in df.index if jogadores_vars[i].varValue == 1]
+      df_time = df.loc[selecionados]
+      total_valor = df_time['valor_mercado'].sum()
+      st.success(f"✅ Time montado com sucesso! Total gasto: R$ {int(total_valor):,}".replace(",", "."))
+      st.dataframe(df_time[['name', 'position', 'valor_mercado', 'score_normalizado']].rename(columns={
+          'name': 'Nome',
+          'position': 'Posição',
+          'valor_mercado': 'Valor de Mercado',
+          'score_normalizado': 'Pontuação'
+      }), use_container_width=True)
+
+      return df_time
+  else:
+      st.warning("⚠️ Não foi possível montar um time com as restrições definidas (orçamento muito baixo).")
 
 def exibir_time_em_campo(df_time, position_labels):
-    st.markdown("## 🟢 Time em Campo (Formação 1-4-3-3)")
+    st.markdown(f"## 🟢 Time em Campo (Formação {widget_esquema_tatico})")
     st.markdown("Visualização dos jogadores como se estivessem dispostos em um campo de futebol.")
 
     # Agrupar jogadores por posição
@@ -258,256 +267,25 @@ def exibir_time_em_campo(df_time, position_labels):
 
     # Defensores
     st.markdown("### 🛡️ Defesa", unsafe_allow_html=True)
-    cols = st.columns(4)
+    cols = st.columns(len(posicoes['D']))
     for i, jogador in enumerate(posicoes['D']):
         cols[i].markdown(format_player(jogador), unsafe_allow_html=True)
 
     # Meio-campistas
     st.markdown("### 🎯 Meio-Campo", unsafe_allow_html=True)
-    cols = st.columns(3)
+    cols = st.columns(len(posicoes['M']))
     for i, jogador in enumerate(posicoes['M']):
         cols[i].markdown(format_player(jogador), unsafe_allow_html=True)
 
     # Atacantes
     st.markdown("### 🎯 Ataque", unsafe_allow_html=True)
-    cols = st.columns(3)
+    cols = st.columns(len(posicoes['F']))
     for i, jogador in enumerate(posicoes['F']):
         cols[i].markdown(format_player(jogador), unsafe_allow_html=True)
 
     st.markdown("</div>", unsafe_allow_html=True)
 
-montar_time_ideal(df, budget=100_000_000, position_labels=position_labels)
-exibir_time_em_campo(pd.DataFrame(jogadores_selecionados), position_labels)
-
-st.set_page_config(layout="wide")
-
-# HTML e CSS para o campo de futebol
-html_code = """
-<style>
-  .field-container {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    height: 100vh; /* Ajuste a altura conforme necessário */
-    overflow: hidden; /* Para garantir que o campo não transborde */
-  }
-
-  .soccer-field {
-    width: 90%;
-    max-width: 1000px; /* Largura máxima para o campo */
-    aspect-ratio: 100 / 60; /* Proporção aproximada de um campo de futebol */
-    background-color: #588f27; /* Cor verde do campo */
-    border: 5px solid white; /* Borda externa */
-    position: relative;
-    box-shadow: 0 0 20px rgba(0,0,0,0.5);
-    overflow: hidden; /* Garante que os elementos fora da borda não sejam visíveis, exceto os gols */
-  }
-
-  /* Círculo central */
-  .center-circle {
-    width: 20%;
-    height: 33.33%; /* Ajuste com base na proporção desejada do círculo */
-    border: 3px solid white;
-    border-radius: 50%;
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-  }
-
-  /* Linha central */
-  .center-line {
-    width: 3px;
-    height: 100%;
-    background-color: white;
-    position: absolute;
-    left: 50%;
-    transform: translateX(-50%);
-  }
-
-  /* Áreas de grande penalidade */
-  .penalty-box-left, .penalty-box-right {
-    width: 15%; /* Ajuste da largura */
-    height: 44%; /* Ajuste da altura */
-    border: 3px solid white;
-    position: absolute;
-    top: 50%;
-    transform: translateY(-50%);
-    box-sizing: border-box;
-  }
-
-  .penalty-box-left {
-    left: 0;
-    border-left: none;
-  }
-
-  .penalty-box-right {
-    right: 0;
-    border-right: none;
-  }
-
-  /* Áreas de baliza */
-  .goal-area-left, .goal-area-right {
-    width: 7%; /* Ajuste da largura */
-    height: 20%; /* Ajuste da altura */
-    border: 3px solid white;
-    position: absolute;
-    top: 50%;
-    transform: translateY(-50%);
-    box-sizing: border-box;
-  }
-
-  .goal-area-left {
-    left: 0;
-    border-left: none;
-  }
-
-  .goal-area-right {
-    right: 0;
-    border-right: none;
-  }
-
-  /* Balizas */
-  .goal-left, .goal-right {
-    width: 2%; /* Largura da baliza */
-    height: 10%; /* Altura da baliza */
-    background-color: lightgray;
-    border: 2px solid darkgray;
-    position: absolute;
-    top: 50%;
-    transform: translateY(-50%);
-    z-index: 10;
-  }
-
-  .goal-left {
-    left: -2%; /* Posição fora do campo */
-  }
-
-  .goal-right {
-    right: -2%; /* Posição fora do campo */
-  }
-
-  /* Marcas de grande penalidade */
-  .penalty-spot-left, .penalty-spot-right {
-    width: 1%;
-    height: 1.66%; /* Relativo à altura do campo */
-    background-color: white;
-    border-radius: 50%;
-    position: absolute;
-    top: 50%;
-    transform: translateY(-50%);
-  }
-
-  .penalty-spot-left {
-    left: 10%; /* Ajuste da posição */
-  }
-
-  .penalty-spot-right {
-    right: 10%; /* Ajuste da posição */
-  }
-
-  /* Arco penal (meia-lua) */
-  .penalty-arc-left, .penalty-arc-right {
-    width: 15%; /* Largura do contêiner do arco (mesma da área para facilitar o posicionamento) */
-    height: 25%; /* Altura do contêiner do arco */
-    border: 3px solid white;
-    border-radius: 50%; /* Faz um círculo completo */
-    position: absolute;
-    top: 50%;
-    transform: translateY(-50%);
-  }
-
-  .penalty-arc-left {
-    left: calc(15% - 7.5%); /* Posiciona o centro do círculo do arco na linha da área */
-    border-top-color: transparent;
-    border-bottom-color: transparent;
-    border-left-color: transparent; /* Esconde a parte interna do círculo */
-  }
-
-  .penalty-arc-right {
-    right: calc(15% - 7.5%); /* Posiciona o centro do círculo do arco na linha da área */
-    border-top-color: transparent;
-    border-bottom-color: transparent;
-    border-right-color: transparent; /* Esconde a parte interna do círculo */
-  }
-
-  /* Estilo dos jogadores (MAIOR) */
-  .player {
-    position: absolute;
-    width: 6%; /* Tamanho do jogador - AUMENTADO */
-    height: 10%; /* Tamanho do jogador (proporcional à altura do campo) - AUMENTADO */
-    border-radius: 50%; /* Formato de botão */
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    font-size: 0.9em; /* Aumentado */
-    font-weight: bold;
-    color: white;
-    text-align: center;
-    flex-direction: column; /* Nome abaixo do botão */
-    line-height: 1.2;
-    z-index: 5; /* Garante que os jogadores fiquem acima do campo */
-    box-shadow: 2px 2px 5px rgba(0,0,0,0.3); /* Sombra para dar profundidade */
-  }
-
-  .player-name {
-    font-size: 0.7em; /* Tamanho da fonte do nome - Aumentado */
-    color: white;
-    margin-top: 0.3em; /* Espaçamento entre o botão e o nome */
-    white-space: nowrap; /* Evita que o nome quebre a linha */
-    text-shadow: 1px 1px 2px rgba(0,0,0,0.7); /* Sombra no texto para melhor legibilidade */
-  }
-
-  .team-a {
-    background-color: #007bff; /* Azul */
-    border: 2px solid #0056b3; /* Borda mais grossa */
-  }
-
-  /* Posições dos jogadores (agora só um time) - Formação 4-3-3 adaptada */
-  /* Time A (Azul) */
-  .player-a-gk { left: 5%; top: 50%; transform: translate(-50%, -50%); }
-  .player-a-cb1 { left: 20%; top: 30%; transform: translate(-50%, -50%); }
-  .player-a-cb2 { left: 20%; top: 70%; transform: translate(-50%, -50%); }
-  .player-a-lb { left: 15%; top: 15%; transform: translate(-50%, -50%); }
-  .player-a-rb { left: 15%; top: 85%; transform: translate(-50%, -50%); }
-  .player-a-cm1 { left: 40%; top: 25%; transform: translate(-50%, -50%); }
-  .player-a-cm2 { left: 40%; top: 50%; transform: translate(-50%, -50%); }
-  .player-a-cm3 { left: 40%; top: 75%; transform: translate(-50%, -50%); }
-  .player-a-lw { left: 60%; top: 15%; transform: translate(-50%, -50%); }
-  .player-a-rw { left: 60%; top: 85%; transform: translate(-50%, -50%); }
-  .player-a-st { left: 75%; top: 50%; transform: translate(-50%, -50%); }
-
-</style>
-
-<div class="field-container">
-  <div class="soccer-field">
-    <div class="center-circle"></div>
-    <div class="center-line"></div>
-    <div class="penalty-box-left"></div>
-    <div class="penalty-box-right"></div>
-    <div class="goal-area-left"></div>
-    <div class="goal-area-right"></div>
-    <div class="goal-left"></div>
-    <div class="goal-right"></div>
-    <div class="penalty-spot-left"></div>
-    <div class="penalty-spot-right"></div>
-    <div class="penalty-arc-left"></div>
-    <div class="penalty-arc-right"></div>
-
-    <div class="player team-a player-a-gk">GK<span class="player-name">Alisson</span></div>
-    <div class="player team-a player-a-cb1">ZAG<span class="player-name">Marquinhos</span></div>
-    <div class="player team-a player-a-cb2">ZAG<span class="player-name">Thiago Silva</span></div>
-    <div class="player team-a player-a-lb">LE<span class="player-name">Alex Telles</span></div>
-    <div class="player team-a player-a-rb">LD<span class="player-name">Danilo</span></div>
-    <div class="player team-a player-a-cm1">MC<span class="player-name">Casemiro</span></div>
-    <div class="player team-a player-a-cm2">MC<span class="player-name">Paquetá</span></div>
-    <div class="player team-a player-a-cm3">MC<span class="player-name">Bruno G.</span></div>
-    <div class="player team-a player-a-lw">PE<span class="player-name">Vini Jr.</span></div>
-    <div class="player team-a player-a-rw">PD<span class="player-name">Raphinha</span></div>
-    <div class="player team-a player-a-st">ATA<span class="player-name">Richarlison</span></div>
-
-  </div>
-</div>
-"""
-
-st.components.v1.html(html_code, height=600) # Ajuste a altura conforme necessário
+df_time_ideal = montar_time_ideal(df, budget=100_000_000, position_labels=position_labels)
+if df_time_ideal is not None:
+  # Exibir o time em campo
+  exibir_time_em_campo(pd.DataFrame(df_time_ideal), position_labels)
