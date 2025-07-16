@@ -35,11 +35,13 @@ Nesta unidade, exploramos conceitos fundamentais de Análise Exploratória de Da
 
 ## 🚀 Unidade III
 
+Nesta unidade, demos os primeiros passos no campo do **Aprendizado de Máquina**, explorando tanto técnicas **supervisionadas** quanto **não supervisionadas**.
+
+Iniciamos com as **árvores de decisão**, um algoritmo supervisionado bastante utilizado por sua simplicidade e capacidade de interpretação. Estudamos os conceitos fundamentais por trás do modelo — como entropia, ganho de informação e profundidade da árvore — e aplicamos esses conhecimentos na prática com a biblioteca **Scikit-learn**, avaliando a performance dos modelos por meio de métricas como acurácia e matriz de confusão.
+
+Na segunda parte da unidade, exploramos técnicas de **aprendizagem não supervisionada**, com foco em algoritmos de **agrupamento de dados**. Utilizando também o pacote **Scikit-learn**, aprendemos como segmentar dados sem rótulos prévios, reconhecendo padrões ocultos e estruturas nos conjuntos de dados. Essa abordagem é especialmente útil em tarefas de análise exploratória, segmentação de clientes e compressão de dados.
+
 ### 🎯 Atividades/projetos
 
-- [📌 Atividade 3](./uni3/atividade1.md)
-
-## 🛠️ Projeto Final
-
-- [📌 Projeto Final](./proj_final/projeto_final.md)
+- [📌 Atividade 3 - ](./uni3/atividade1.md)
 
