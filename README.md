@@ -43,5 +43,5 @@ Na segunda parte da unidade, exploramos técnicas de **aprendizagem não supervi
 
 ### 🎯 Atividades/projetos
 
-- [📌 Atividade 3 - ](./uni3/atividade1.md)
+- [📌 Atividade 3 - Utilizando machine learning para prever o preço de mercado dos jogadores](./uni3/unidade3.md)
 
