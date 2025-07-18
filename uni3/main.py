@@ -11,7 +11,7 @@ from sklearn.model_selection import train_test_split
 from lazypredict.Supervised import LazyRegressor
 
 # Carregar dados
-df = pd.read_csv("../uni2/dataset/melhores_jogadores.csv")
+df = pd.read_csv("uni2/dataset/melhores_jogadores.csv")
 
 # Identificar a coluna correta
 coluna_valor = [col for col in df.columns if "valor_mercado" in col][0]
@@ -296,8 +296,8 @@ st.markdown("""
 Esta seção utiliza um modelo de aprendizado de máquina para sugerir a formação ideal de um time com base nos atributos dos jogadores e no valor de mercado. A ideia é montar uma equipe equilibrada, maximizando o desempenho dentro de um orçamento definido.
 """)
 
-X = pd.read_csv('./dataset/X.csv')
-y = pd.read_csv('./dataset/y.csv')
+X = pd.read_csv('uni3/dataset/X.csv')
+y = pd.read_csv('uni3/dataset/y.csv')
 
 # Suponha que X e y já estejam carregados
 
